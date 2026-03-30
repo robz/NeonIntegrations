@@ -28,8 +28,8 @@ class TestDailyMaintenance:
             json={"data": [], "totalCount": 0}
         )
 
-        import dailyMaintenance
-        dailyMaintenance.main()
+        from daily_maintenance_lambda.lambda_function import lambda_handler
+        lambda_handler()
 
         assert neon_search_mock.called, "Neon search should be called"
         assert openpath_mock.called, "OpenPath users API should be called"
@@ -44,8 +44,8 @@ class TestDailyMaintenance:
             json={"data": [], "totalCount": 0}
         )
 
-        import dailyMaintenance
-        dailyMaintenance.main()
+        from daily_maintenance_lambda.lambda_function import lambda_handler
+        lambda_handler()
 
         assert neon_search_mock.called, "Neon search should be called"
         assert openpath_mock.called, "OpenPath search should be called"
