@@ -2,19 +2,23 @@ name: Run pytest
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ["3.12"]
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        uses: docker/build-push-action@v6
         with:
-          python-version: ${{ matrix.python }}
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Run pytest
-        run: python -m pytest
+          platforms: linux/arm64
+          context: .
+          target: test
+          load: true
+          tags: tests:latest
+
+      - name: Run tests
+        run: docker run --rm tests:latest -v
 on:
   pull_request:
     branches:

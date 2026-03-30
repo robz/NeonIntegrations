@@ -1,4 +1,4 @@
-name: Deploy Alta Open Lambda
+name: Deploy Lambdas
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 env:
   AWS_REGION: us-east-2
-  ALTA_OPEN_LAMBDA_ECR_REPO: alta-open-lambda
+  ECR_REPO: neon-integrations
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,7 +21,7 @@ jobs:
   build-push-deploy:
     if: ${{ github.repository == 'asmbly-makerspace/NeonIntegrations' }}
     runs-on: ubuntu-latest
-    name: Build, push, and deploy Alta Open Lambda
+    name: Build, push, and deploy Lambdas
 
     steps:
     - name: Checkout repository
@@ -46,15 +46,26 @@ jobs:
         platforms: linux/arm64
         context: .
         provenance: false
-        file: ./alta_open_lambda/Dockerfile
+        target: production
         push: true
-        tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ALTA_OPEN_LAMBDA_ECR_REPO }}:latest
+        tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}:latest
 
-    - name: Deploy
+    - name: Deploy alta-open-update
       uses: aws-actions/aws-lambda-deploy@v1.1.0
       with:
         function-name: alta-open-update
         package-type: Image
         architectures: arm64
-        image-uri: ${{ steps.login-ecr.outputs.registry }}/${{ env.ALTA_OPEN_LAMBDA_ECR_REPO }}:latest
+        image-uri: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}:latest
         timeout: 20
+        image-config: '{"Command": ["alta_open_lambda.lambda_function.lambda_handler"]}'
+
+    - name: Deploy daily-maintenance
+      uses: aws-actions/aws-lambda-deploy@v1.1.0
+      with:
+        function-name: daily-maintenance
+        package-type: Image
+        architectures: arm64
+        image-uri: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}:latest
+        timeout: 900
+        image-config: '{"Command": ["daily_maintenance_lambda.lambda_function.lambda_handler"]}'

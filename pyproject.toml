@@ -15,6 +15,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "google-api-python-client>=2.159.0",
+    "pytest>=8.4.1",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.14.1",
+    "requests-mock>=1.12.1",
     "types-boto3>=1.40.64",
     "types-requests>=2.32.4.20250913",
 ]
