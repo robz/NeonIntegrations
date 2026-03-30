@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from tenacity import wait_none
 
 # Import after conftest has set up mocks
 from mailjetUtil import (
@@ -10,15 +9,6 @@ from mailjetUtil import (
     Subscriber,
     MailjetAction,
 )
-
-
-@pytest.fixture(autouse=True)
-def _no_retry_wait():
-    """Disable tenacity retry wait times so tests run instantly."""
-    original_wait = MJService.get_job_status.retry.wait
-    MJService.get_job_status.retry.wait = wait_none()
-    yield
-    MJService.get_job_status.retry.wait = original_wait
 
 
 @pytest.fixture
@@ -47,121 +37,6 @@ def mj_service(mock_mailjet_client):
         service = MJService(credentials)
         service.client = mock_mailjet_client
         return service
-
-
-class TestGetJobStatus:
-    """Test suite for get_job_status method with retry functionality."""
-
-    def test_get_job_status_success_first_try(self, mj_service, mock_mailjet_client):
-        """Test successful job status retrieval on first attempt."""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "Data": [{"Status": "Completed", "JobID": 12345}]
-        }
-
-        mock_mailjet_client.contact_managemanycontacts.get.return_value = mock_response
-
-        status = mj_service.get_job_status(12345)
-
-        assert status == "Completed"
-        assert mock_mailjet_client.contact_managemanycontacts.get.call_count == 1
-
-    def test_get_job_status_404_then_success(self, mj_service, mock_mailjet_client):
-        """Test job status retrieval with 404 (not ready) then success."""
-        # First call returns 404, second call returns success
-        mock_404_response = Mock()
-        mock_404_response.status_code = 404
-        mock_404_response.json.return_value = {
-            "ErrorInfo": "",
-            "ErrorMessage": "Object not found",
-            "StatusCode": 404
-        }
-
-        mock_success_response = Mock()
-        mock_success_response.status_code = 200
-        mock_success_response.json.return_value = {
-            "Data": [{"Status": "Completed", "JobID": 12345}]
-        }
-
-        mock_mailjet_client.contact_managemanycontacts.get.side_effect = [
-            mock_404_response,
-            mock_success_response
-        ]
-
-        status = mj_service.get_job_status(12345)
-
-        assert status == "Completed"
-        assert mock_mailjet_client.contact_managemanycontacts.get.call_count == 2
-
-    def test_get_job_status_multiple_404s_then_success(self, mj_service, mock_mailjet_client):
-        """Test job status retrieval with multiple 404s before success."""
-        mock_404_response = Mock()
-        mock_404_response.status_code = 404
-        mock_404_response.json.return_value = {
-            "ErrorInfo": "",
-            "ErrorMessage": "Object not found",
-            "StatusCode": 404
-        }
-
-        mock_success_response = Mock()
-        mock_success_response.status_code = 200
-        mock_success_response.json.return_value = {
-            "Data": [{"Status": "Completed", "JobID": 12345}]
-        }
-
-        # 3 404s, then success
-        mock_mailjet_client.contact_managemanycontacts.get.side_effect = [
-            mock_404_response,
-            mock_404_response,
-            mock_404_response,
-            mock_success_response
-        ]
-
-        status = mj_service.get_job_status(12345)
-
-        assert status == "Completed"
-        assert mock_mailjet_client.contact_managemanycontacts.get.call_count == 4
-
-    def test_get_job_status_max_retries_exhausted(self, mj_service, mock_mailjet_client):
-        """Test job status retrieval when max retries are exhausted (all 404s)."""
-        from tenacity import RetryError
-
-        mock_404_response = Mock()
-        mock_404_response.status_code = 404
-        mock_404_response.json.return_value = {
-            "ErrorInfo": "",
-            "ErrorMessage": "Object not found",
-            "StatusCode": 404
-        }
-
-        # Always return 404
-        mock_mailjet_client.contact_managemanycontacts.get.return_value = mock_404_response
-
-        # Should raise RetryError after exhausting retries
-        with pytest.raises(RetryError):
-            mj_service.get_job_status(12345)
-
-        # Should attempt 5 times (initial + 4 retries)
-        assert mock_mailjet_client.contact_managemanycontacts.get.call_count == 5
-
-    def test_get_job_status_error_response(self, mj_service, mock_mailjet_client):
-        """Test job status retrieval with non-404 error response."""
-        mock_error_response = Mock()
-        mock_error_response.status_code = 500
-        mock_error_response.json.return_value = {
-            "ErrorInfo": "",
-            "ErrorMessage": "Internal Server Error",
-            "StatusCode": 500
-        }
-
-        mock_mailjet_client.contact_managemanycontacts.get.return_value = mock_error_response
-
-        status = mj_service.get_job_status(12345)
-
-        assert status is None
-        # Should not retry on 500 error
-        assert mock_mailjet_client.contact_managemanycontacts.get.call_count == 1
 
 
 class TestGetIndContact:

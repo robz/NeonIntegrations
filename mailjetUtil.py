@@ -14,7 +14,6 @@ import boto3
 
 from pydantic import BaseModel, Field, model_validator, field_serializer
 from mailjet_rest import Client  # type: ignore
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_result
 from neonUtil import getNeonAccounts
 
 
@@ -358,29 +357,6 @@ class MJService:
 
         return job_id
 
-    @retry(
-        stop=stop_after_attempt(5),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_result(lambda x: x == "Processing"),
-    )
-    def get_job_status(self, job_id: int) -> str | None:
-        response = self.client.contact_managemanycontacts.get(id=job_id)
-
-        if response.status_code == 404:
-            logging.info("Job %s not yet available, retrying...", job_id)
-            return "Processing"
-
-        if response.status_code != 200:
-            logging.error(
-                "Mailjet get job status request failed with status code %s. Response: %s.",
-                response.status_code,
-                response.json(),
-            )
-
-            return None
-
-        return response.json().get("Data")[0].get("Status")
-
     def send_email(self) -> None:
         pass
 
@@ -669,7 +645,6 @@ def run_mailjet_maintenance() -> None:
         logging.error("Failed to update all contacts list")
     else:
         logging.info("Updated all contacts list with job id %s", job_id)
-        logging.info("Job status: %s", mailjet.get_job_status(job_id))
 
     logging.info("Finished running Mailjet maintenance tasks.")
 
