@@ -110,6 +110,41 @@ def updateDID(account: dict):
         raise ValueError(f"Patch {url} returned status code {response.status_code}")
 
 
+####################################################################
+# Write a batch of DiscourseIDs to Neon.
+# Takes [(account, discourseID), ...]; an empty discourseID clears the
+# field.  The account dicts are updated in place so the caller's copy
+# stays in sync with Neon.
+####################################################################
+def batchUpdateDIDs(matches: list):
+    if not matches:
+        return
+
+    logging.info("Updating DiscourseID on %s Neon accounts", len(matches))
+
+    # Neon's rate limit is 10 req/sec; use 9 for headroom against sleep/network jitter
+    rate_limiter = RateLimiter(per_second=9)
+    failures = []
+
+    def update(match):
+        account, discourseID = match
+        account["DiscourseID"] = discourseID
+        rate_limiter.acquire()
+        try:
+            updateDID(account)
+        except (ValueError, requests.RequestException) as e:
+            # one bad account shouldn't cost us the rest of the batch
+            failures.append((account.get("Account ID"), e))
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        list(executor.map(update, matches))
+
+    if failures:
+        logging.error("Failed to update DiscourseID on %s of %s accounts", len(failures), len(matches))
+        for accountId, e in failures:
+            logging.error("   Neon #%s: %s", accountId, e)
+
+
 class RateLimiter:
     """Allows up to `per_second` calls per second across all threads."""
     def __init__(self, per_second):

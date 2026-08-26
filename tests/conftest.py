@@ -111,13 +111,13 @@ def mock_google_apis(mocker):
 @pytest.fixture
 def mock_discourse(requests_mock):
     """Mock Discourse API group member endpoints with empty responses."""
-    from discourseUtil import D_baseURL
+    from discourseUtil import D_baseURL, USERS_PER_PAGE
 
     groups = ['makers', 'community', 'leadership', 'stewards', 'sysops']
     mocks = {}
     for group in groups:
         mocks[group] = requests_mock.get(
-            f'{D_baseURL}/groups/{group}/members.json?limit=50&offset=0',
+            f'{D_baseURL}/groups/{group}/members.json?limit={USERS_PER_PAGE}&offset=0',
             json={"members": [], "meta": {"total": 0}}
         )
     return mocks

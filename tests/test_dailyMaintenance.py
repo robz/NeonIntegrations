@@ -6,7 +6,7 @@ Tests the main() function by mocking only network interactions (HTTP requests).
 
 import pytest
 from openPathUtil import O_baseURL
-from discourseUtil import D_baseURL, GROUP_IDS
+from discourseUtil import D_baseURL, GROUP_IDS, USERS_PER_PAGE
 from neonUtil import MEMBERSHIP_ID_REGULAR
 from neon_mocker import NeonUserMock, today_plus
 
@@ -71,7 +71,7 @@ class TestDailyMaintenance:
             steward(3, 'newsteward'),  # not yet in Discourse group
         ])
         requests_mock.get(f'{O_baseURL}/users', json={"data": [], "totalCount": 0})
-        requests_mock.get(f'{D_baseURL}/groups/stewards/members.json?limit=50&offset=0',
+        requests_mock.get(f'{D_baseURL}/groups/stewards/members.json?limit={USERS_PER_PAGE}&offset=0',
             json={"members": [{"username": "bobsmith", "name": "Bob Smith"},
                               {"username": "janedoe", "name": "Jane Doe"}],
                   "meta": {"total": 2}})
