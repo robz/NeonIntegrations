@@ -122,8 +122,8 @@ def batchUpdateDIDs(matches: list):
 
     logging.info("Updating DiscourseID on %s Neon accounts", len(matches))
 
-    # Neon's rate limit is 10 req/sec; use 9 for headroom against sleep/network jitter
-    rate_limiter = RateLimiter(per_second=9)
+    # Unclear what Neon's rate limit is for updates, but 9/s caused a few 429s, so use 5/s just in case
+    rate_limiter = RateLimiter(per_second=5)
     failures = []
 
     def update(match):
