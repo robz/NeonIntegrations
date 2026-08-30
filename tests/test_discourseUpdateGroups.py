@@ -72,6 +72,15 @@ class TestMatching:
 
         assert update_discourse_ids(accounts, discourse) == []
 
+    def test_case_0e_excluded_discourse_account_is_never_linked(self):
+        """janedoe is a test account, so it's not moved"""
+        accounts = neonAccounts(neonAccount(1, "Bob", "Smith", "bob@example.com", dID="bob"))
+        discourse = discourseUsers(("bob", "bob@yahoo.com"),
+                                   ("janedoe", "bob@example.com"))
+
+        # without the exclusion this would be {"1": "janedoe"}
+        assert update_discourse_ids(accounts, discourse) == []
+
     def test_case_1a_links_on_email(self):
         accounts = neonAccounts(neonAccount(1, "Bob", "Smith", "bob@example.com"))
         discourse = discourseUsers(("BobS", "bob@example.com"))

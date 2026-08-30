@@ -120,6 +120,10 @@ def main():
     discourseUpdateGroups(neonAccounts)
 
 
+# Discourse accounts that were tests, and shouldn't be linked
+EXCLUDED_DISCOURSE_USERNAMES = {"janedoe", "testuser"}
+
+
 # Neon allows multiple accounts to have the same email
 # Group by email to make it easier to find collisions
 def group_neon_accounts(nAccounts):
@@ -177,6 +181,7 @@ def update_discourse_ids(nAccounts, dAccounts):
             0b. could ambiguously match multiple existing neon accounts -> do not use it, warning
             0c. matches exactly one neon account by email -> use it, log debug
             0d. matches several by email but one by name -> use that one, log debug
+            0e. is in EXCLUDED_DISCOURSE_USERNAMES -> never link it, log debug
         1. neon account currently has no dID set
             1a. there is a matching discource account -> set dID, log debug
             1b. there is no match -> ignore the neon account, log debug
@@ -184,7 +189,7 @@ def update_discourse_ids(nAccounts, dAccounts):
         3. neon account has dID, and accounts still match -> ignore neon account, log debug
         4. neon account has dID, it exists, but accounts don't match
             4a. neon account matches a different discourse account -> set new dID in neon, warning
-            4b. neon account matches no other discourse account, and its discourse id isn't used by any other account -> keep it, warning
+            4b. neon account matches no other discourse account, and its discourse id isn't used by any other account -> keep it, log debug
             4c. neon account matches no other discourse account, but its current discourse account now matches a different neon account -> remove it, warning
     """
 
@@ -195,6 +200,11 @@ def update_discourse_ids(nAccounts, dAccounts):
     nMatches = set()
     updates = []
     for dUsername, dAccount in dAccounts.items():
+        if dUsername in EXCLUDED_DISCOURSE_USERNAMES:
+            # case 0e
+            logging.debug(f'Discourse account {dUsername} is excluded from matching. Ignoring it')
+            continue
+
         nAccount = find_matching_neon_account(dAccount, nAccountsByEmail)
         if nAccount is None:
             # cases 0a and 0b
@@ -244,7 +254,7 @@ def update_discourse_ids(nAccounts, dAccounts):
                 # case 4b
                 dAccount = dAccounts[nDiscourseID]
                 dEmail = dAccount['email']
-                logging.warning(f"Neon account {nAccountID} {nEmail} has discourseID {nDiscourseID} {dEmail} but the accounts no longer match. Keeping it anyway, since that discourse account doesn't match any other neon account right now.")
+                logging.debug(f"Neon account {nAccountID} {nEmail} has discourseID {nDiscourseID} {dEmail} but the accounts no longer match. Keeping it anyway, since that discourse account doesn't match any other neon account right now.")
         else:
             # case 1b
             logging.debug(f'Neon account {nAccountID} {nEmail} has no discourseID and matches no discourse account. Leaving it')
