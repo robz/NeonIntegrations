@@ -375,7 +375,11 @@ def _neon_search(data):
 ####################################################################
 # Get Neon accounts matching given criteria
 ####################################################################
-def getNeonAccounts(searchFields, neonAccountDict={}):
+def getNeonAccounts(searchFields, neonAccountDict=None):
+    # a fresh dict per call unless the caller is accumulating into one of their own
+    if neonAccountDict is None:
+        neonAccountDict = {}
+
     # Output Fields
     # 85 is DiscourseId
     # 77 is OrientationDate
@@ -437,7 +441,7 @@ def getNeonAccounts(searchFields, neonAccountDict={}):
 ####################################################################
 # Get all accounts in neon with OP IDs but no memberships
 ####################################################################
-def getOrphanOpAccounts(neonAccountDict={}):
+def getOrphanOpAccounts(neonAccountDict=None):
     searchFields = [
         {"field": "Membership Expiration Date", "operator": "BLANK"},
         {"field": "OpenPathID", "operator": "NOT_BLANK"},
@@ -449,7 +453,7 @@ def getOrphanOpAccounts(neonAccountDict={}):
 ####################################################################
 # Get all accounts in neon with Discourse IDs but no memberships
 ####################################################################
-def getOrphanDiscourseAccounts(neonAccountDict={}):
+def getOrphanDiscourseAccounts(neonAccountDict=None):
     searchFields = [
         {"field": "Membership Expiration Date", "operator": "BLANK"},
         {"field": "DiscourseID", "operator": "NOT_BLANK"},
@@ -462,7 +466,7 @@ def getOrphanDiscourseAccounts(neonAccountDict={}):
 # Get all members in Neon without subscription details
 # Should we make a synthetic type for "Members" and combine this with getByType?
 ####################################################################
-def getMembersFast(neonAccountDict={}):
+def getMembersFast(neonAccountDict=None):
     searchFields = [{"field": "Membership Expiration Date", "operator": "NOT_BLANK"}]
 
     return getNeonAccounts(searchFields, neonAccountDict=neonAccountDict)
@@ -471,7 +475,7 @@ def getMembersFast(neonAccountDict={}):
 ####################################################################
 # Get all accounts of a given type in Neon without subscription details
 ####################################################################
-def getAccountsByType(type: str, neonAccountDict={}):
+def getAccountsByType(type: str, neonAccountDict=None):
     searchFields = [{"field": "Individual Type", "operator": "EQUAL", "value": type}]
 
     return getNeonAccounts(searchFields, neonAccountDict=neonAccountDict)

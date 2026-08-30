@@ -172,6 +172,10 @@ def find_matching_neon_account(dAccount, nAccountsByEmail):
 
 
 def update_discourse_ids(nAccounts, dAccounts):
+    if not dAccounts:
+        # an empty or missing list would read as "every discourse account was deleted"
+        logging.error("Fetched no Discourse users; skipping DiscourseID sync.")
+
     """
     Update dID field on neon accounts by analyzing all neon and discourse users
 
