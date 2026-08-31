@@ -2,6 +2,7 @@
 #Fetch all member records from Neon and update OpenPath as necessary for all
 #* Run me at least once a day to catch subscription expirations
 
+import requests
 import neonUtil
 import openPathUtil
 import logging
@@ -92,6 +93,13 @@ def openPathUpdateAll(neonAccounts, mailSummary = False):
         if account.get("OpenPathID"):
             openPathUtil.updateGroups(account,
                                         openPathGroups=opUsers.get(int(account.get("OpenPathID"))).get("groups"))
+            #an interrupted createUser() leaves an OpenPath user with no credential,
+            #and this branch is the only one such an account will ever reach again.
+            #one member's bad state shouldn't cost us the rest of the run.
+            try:
+                openPathUtil.ensureMobileCredential(account)
+            except (ValueError, requests.RequestException) as e:
+                logging.error("Could not check or issue credential for Neon %s: %s", accountId, e)
             #note that this isn't necessarily 100% accurate, because we have Neon users with provisioned OpenPath IDs and no access groups
             #assuming that typical users who gained and lost openPath access have a signed waiver
             if not account.get("WaiverDate"):

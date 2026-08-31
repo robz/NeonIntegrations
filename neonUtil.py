@@ -650,3 +650,16 @@ def accountHasFacilityAccess(account: dict):
             return True
 
     return False
+
+
+####################################################################
+# Helper function: should this account hold an OpenPath credential?
+# Facility access, plus instructors and on-duty volunteers who need
+# OpenPath credentials without necessarily having facility access.
+####################################################################
+def accountNeedsOpenPathAccess(account: dict):
+    return (
+        accountHasFacilityAccess(account)
+        or accountIsType(account, INSTRUCTOR_TYPE)
+        or accountIsType(account, ONDUTY_TYPE)
+    )

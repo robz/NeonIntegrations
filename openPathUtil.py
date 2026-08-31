@@ -513,3 +513,41 @@ def createMobileCredential(neonAccount):
         raise ValueError(
             f"Post {url} returned status code {response.status_code}; expected 204"
         )
+
+
+#################################################################################
+# Issue a mobile credential to an eligible OpenPath user that has none.
+#
+# createUser() is the only path that provisions credentials, and it only runs
+# for accounts with no OpenPathID.  If it is interrupted partway -- as happened
+# to four accounts during the Neon API outage of 2026-07-11..16, when the PATCH
+# writing OpenPathID back to Neon returned 400 -- the OpenPath user exists but
+# has no credential.  Once the OpenPathID lands in Neon (by retry, or by the
+# externalId reconciliation in openPathUpdateAll), every later run takes the
+# updateGroups branch and no code path will ever issue that member a credential.
+# Members in this state have working door groups and no way to open a door.
+#
+# Returns True if a credential was issued.
+#################################################################################
+def ensureMobileCredential(neonAccount):
+    if not neonAccount.get("OpenPathID"):
+        return False
+
+    # don't hand credentials to people who shouldn't have facility access
+    if not neonUtil.accountNeedsOpenPathAccess(neonAccount):
+        return False
+
+    # any credential at all (mobile, card, fob) means provisioning completed;
+    # only a user with none is in the broken state we're repairing
+    if getCredentialsForId(neonAccount.get("OpenPathID")):
+        return False
+
+    logging.warning(
+        "OpenPath user %s (Neon %s, %s) has access but no credential; issuing one",
+        neonAccount.get("OpenPathID"),
+        neonAccount.get("Account ID"),
+        neonAccount.get("Email 1"),
+    )
+
+    createMobileCredential(neonAccount)
+    return True
